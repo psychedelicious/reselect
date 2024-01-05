@@ -1,6 +1,7 @@
 // Original source:
 // - https://github.com/facebook/react/blob/0b974418c9a56f6c560298560265dcf4b65784bc/packages/react/src/ReactCache.js
 
+import { lruMemoize } from '@internal/lruMemoize'
 import type {
   AnyFunction,
   DefaultMemoizeFields,
@@ -169,97 +170,104 @@ export interface WeakMapMemoizeOptions<Result = any> {
  * @public
  * @experimental
  */
-export function weakMapMemoize<Func extends AnyFunction>(
-  func: Func,
-  options: WeakMapMemoizeOptions<ReturnType<Func>> = {}
-) {
-  let fnNode = createCacheNode()
-  const { resultEqualityCheck } = options
+// export function weakMapMemoize<Func extends AnyFunction>(
+//   func: Func,
+//   options: WeakMapMemoizeOptions<ReturnType<Func>> = {}
+// ) {
+//   let fnNode = createCacheNode()
+//   const { resultEqualityCheck } = options
 
-  let lastResult: WeakRef<object> | undefined
+//   let lastResult: WeakRef<object> | undefined
 
-  let resultsCount = 0
+//   let resultsCount = 0
 
-  function memoized() {
-    let cacheNode = fnNode
-    const { length } = arguments
-    for (let i = 0, l = length; i < l; i++) {
-      const arg = arguments[i]
-      if (
-        typeof arg === 'function' ||
-        (typeof arg === 'object' && arg !== null)
-      ) {
-        // Objects go into a WeakMap
-        let objectCache = cacheNode.o
-        if (objectCache === null) {
-          cacheNode.o = objectCache = new WeakMap()
-        }
-        const objectNode = objectCache.get(arg)
-        if (objectNode === undefined) {
-          cacheNode = createCacheNode()
-          objectCache.set(arg, cacheNode)
-        } else {
-          cacheNode = objectNode
-        }
-      } else {
-        // Primitives go into a regular Map
-        let primitiveCache = cacheNode.p
-        if (primitiveCache === null) {
-          cacheNode.p = primitiveCache = new Map()
-        }
-        const primitiveNode = primitiveCache.get(arg)
-        if (primitiveNode === undefined) {
-          cacheNode = createCacheNode()
-          primitiveCache.set(arg, cacheNode)
-        } else {
-          cacheNode = primitiveNode
-        }
-      }
-    }
+//   function memoized() {
+//     let cacheNode = fnNode
+//     const { length } = arguments
+//     for (let i = 0, l = length; i < l; i++) {
+//       const arg = arguments[i]
+//       if (
+//         typeof arg === 'function' ||
+//         (typeof arg === 'object' && arg !== null)
+//       ) {
+//         // Objects go into a WeakMap
+//         let objectCache = cacheNode.o
+//         if (objectCache === null) {
+//           cacheNode.o = objectCache = new WeakMap()
+//         }
+//         const objectNode = objectCache.get(arg)
+//         if (objectNode === undefined) {
+//           cacheNode = createCacheNode()
+//           objectCache.set(arg, cacheNode)
+//         } else {
+//           cacheNode = objectNode
+//         }
+//       } else {
+//         // Primitives go into a regular Map
+//         let primitiveCache = cacheNode.p
+//         if (primitiveCache === null) {
+//           cacheNode.p = primitiveCache = new Map()
+//         }
+//         const primitiveNode = primitiveCache.get(arg)
+//         if (primitiveNode === undefined) {
+//           cacheNode = createCacheNode()
+//           primitiveCache.set(arg, cacheNode)
+//         } else {
+//           cacheNode = primitiveNode
+//         }
+//       }
+//     }
 
-    const terminatedNode = cacheNode as unknown as TerminatedCacheNode<any>
+//     const terminatedNode = cacheNode as unknown as TerminatedCacheNode<any>
 
-    let result
+//     let result
 
-    if (cacheNode.s === TERMINATED) {
-      result = cacheNode.v
-    } else {
-      // Allow errors to propagate
-      result = func.apply(null, arguments as unknown as any[])
-      resultsCount++
-    }
+//     if (cacheNode.s === TERMINATED) {
+//       result = cacheNode.v
+//     } else {
+//       // Allow errors to propagate
+//       result = func.apply(null, arguments as unknown as any[])
+//       resultsCount++
+//     }
 
-    terminatedNode.s = TERMINATED
+//     terminatedNode.s = TERMINATED
 
-    if (resultEqualityCheck) {
-      const lastResultValue = lastResult?.deref() ?? lastResult
-      if (
-        lastResultValue != null &&
-        resultEqualityCheck(lastResultValue as ReturnType<Func>, result)
-      ) {
-        result = lastResultValue
-        resultsCount !== 0 && resultsCount--
-      }
+//     if (resultEqualityCheck) {
+//       const lastResultValue = lastResult?.deref?.() ?? lastResult
+//       if (
+//         lastResultValue != null &&
+//         resultEqualityCheck(lastResultValue as ReturnType<Func>, result)
+//       ) {
+//         result = lastResultValue
+//         resultsCount !== 0 && resultsCount--
+//       }
 
-      const needsWeakRef =
-        (typeof result === 'object' && result !== null) ||
-        typeof result === 'function'
-      lastResult = needsWeakRef ? new Ref(result) : result
-    }
-    terminatedNode.v = result
-    return result
-  }
+//       const needsWeakRef =
+//         (typeof result === 'object' && result !== null) ||
+//         typeof result === 'function'
+//       lastResult = needsWeakRef ? new Ref(result) : result
+//     }
+//     terminatedNode.v = result
+//     return result
+//   }
 
-  memoized.clearCache = () => {
-    fnNode = createCacheNode()
-    memoized.resetResultsCount()
-  }
+//   memoized.clearCache = () => {
+//     fnNode = createCacheNode()
+//     memoized.resetResultsCount()
+//   }
 
-  memoized.resultsCount = () => resultsCount
+//   memoized.resultsCount = () => resultsCount
 
-  memoized.resetResultsCount = () => {
-    resultsCount = 0
-  }
+//   memoized.resetResultsCount = () => {
+//     resultsCount = 0
+//   }
 
-  return memoized as Func & Simplify<DefaultMemoizeFields>
-}
+//   return memoized as Func & Simplify<DefaultMemoizeFields>
+// }
+
+export const weakMapMemoize = lruMemoize
+console.log('------------------------------------')
+console.log('------------------------------------')
+console.log('Setting weakMapMemoize to lruMemoize')
+console.log('------------------------------------')
+console.log('------------------------------------')
